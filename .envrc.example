@@ -1,0 +1,6 @@
+export DB_DATABASE=set-me
+export DB_PASSWORD=set-me
+export DB_USER=set-me
+# assuming ssh reverse tunnel
+export DB_HOST=127.0.0.1
+export DB_PORT=13306
