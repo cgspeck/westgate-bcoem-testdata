@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import config
 from datadefs import ParticipantBrewerRecord
 from db import create_entries, create_participant, participant_exists

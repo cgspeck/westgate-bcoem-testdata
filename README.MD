@@ -25,6 +25,18 @@ poetry install
 
 ## Entry generator
 
-* Establish ssh reverse tunnel to database if necessary.
-* Copy and set `.envrc` then `direnv allow`
-* Execute: `poetry run python src/gen-entries.py`
+* establish ssh reverse tunnel to database if necessary.
+* copy and set `.envrc` then `direnv allow`
+* execute: `poetry run python src/gen-entries.py`
+
+## Score generator
+
+* save column "Entry Number" from competition spreadsheet (including header)
+* execute:
+
+```shell
+poetry run python src/gen-points.py entry-ids.csv
+libreoffice results.csv
+```
+
+* Copy values from rows A - F back into tab "Score Entry" of competition spreadsheet
