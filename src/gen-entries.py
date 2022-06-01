@@ -1,7 +1,7 @@
 import config
 from datadefs import ParticipantBrewerRecord
 from db import create_entries, create_participant, participant_exists
-from gen import generate_participant
+from utils import generate_participant
 
 
 participants: list[ParticipantBrewerRecord] = []
