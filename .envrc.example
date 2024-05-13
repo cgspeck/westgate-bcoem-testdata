@@ -1,3 +1,5 @@
+# source_up
+
 export DB_DATABASE=set-me
 export DB_PASSWORD=set-me
 export DB_USER=set-me
