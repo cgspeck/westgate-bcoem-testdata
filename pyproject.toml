@@ -3,7 +3,12 @@ name = "westgate-bcoem-testdata"
 version = "0.1.0"
 description = ""
 authors = ["Chris Speck <cgspeck@gmail.com>"]
-package-mode = false
+packages = [
+    { include = "src" },
+]
+
+[tool.poetry.scripts]
+gen-points = "westgate-bcoem-testdata:gen_points"
 
 [tool.poetry.dependencies]
 python = "^3.10"

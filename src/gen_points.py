@@ -58,14 +58,16 @@ def generate_score_sheet(entry_id: int):
         overall=randint(0, OVERALL_MAX),
     )
 
-
-def main(reader: "_csv._reader", writer: "_csv._writer"):
+def _load_entryids_from_csv(reader: "_csv._reader") -> list[int]:
     entry_ids: list[int] = []
     for row in reader:
         if len(row) > 0:
             entry_ids.append(int(row[0]))
 
-    entry_ids.sort()
+    return sorted(entry_ids)
+
+
+def main(entry_ids: list[int], writer: "_csv._writer"):
     print(f"{len(entry_ids)} entries: {entry_ids}")
     memo: list[list[ScoreSheet]] = []
 
@@ -111,7 +113,9 @@ if __name__ == "__main__":
         usage="%(prog)s entry-ids.csv results.csv",
     )
     # TODO: add option to get the entry IDs live from the DB
-    parser.add_argument("input_filepath", help="Path to CSV of entry ids")
+    parser.add_argument(
+        "input_filepath", help="Path to CSV of entry ids", nargs="?", default=None
+    )
     parser.add_argument(
         "--output_filepath",
         "-O",
@@ -121,19 +125,26 @@ if __name__ == "__main__":
     parser.set_defaults()
     args = parser.parse_args()
 
-    reader = csv.reader(Path(args.input_filepath).read_text().splitlines())
-    expected_header = "Entry Number"
-    header_row = next(reader)
-    if len(header_row) == 0:
-        print(f"Unable to read file {args.input_filepath}")
-        sys.exit(1)
+    if args.input_filepath is not None:
+        print("Loading Entry IDs from CSV")
+        reader = csv.reader(Path(args.input_filepath).read_text().splitlines())
+        expected_header = "Entry Number"
+        header_row = next(reader)
+        if len(header_row) == 0:
+            print(f"Unable to read file {args.input_filepath}")
+            sys.exit(1)
 
-    if header_row[0] != expected_header:
-        print(f"Expected header '{expected_header}' not found, got '{header_row}'")
-        sys.exit(1)
+        if header_row[0] != expected_header:
+            print(f"Expected header '{expected_header}' not found, got '{header_row}'")
+            sys.exit(1)
+
+        entry_ids = _load_entryids_from_csv(reader)
+    else:
+        print("Loading Entry IDs from the Database")
+        entry_ids = []
 
     print(f"Opening {args.output_filepath}")
 
     with Path(args.output_filepath).open("wt") as fh:
         writer = csv.writer(fh)
-        main(reader, writer)
+        main(entry_ids, writer)

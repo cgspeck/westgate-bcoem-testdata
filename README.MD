@@ -20,6 +20,9 @@ Setup python and dependencies:
 
 ```shell
 pyenv install
+python -m venv .venv
+source ./.venv/bin/activate
+pip install poetry
 poetry install
 ```
 
@@ -27,7 +30,7 @@ poetry install
 
 * establish ssh reverse tunnel to database if necessary.
 * copy and set `.envrc` then `direnv allow`
-* execute: `poetry run python src/gen-entries.py`
+* execute: `python -m src.gen_entries`
 
 ## Score generator
 
@@ -35,7 +38,7 @@ poetry install
 * execute:
 
 ```shell
-poetry run python src/gen-points.py entry-ids.csv
+python -m src.gen_points
 libreoffice results.csv
 ```
 
