@@ -20,9 +20,17 @@ OVERALL_MAX = 10
 SCORE_SPREAD_MAX = 7
 SCORES_PER_ENTRY = 3
 
+# id (int),  brewCategory str NN, brewSubCategory str NN
 LOAD_ENTRY_IDS_SQL = """
-SELECT id FROM `brewing` ORDER BY id ASC;
+SELECT id, brewCategory, brewSubCategory FROM `brewing` ORDER BY id ASC;
 """
+
+
+@dataclass
+class BrewingRecord:
+    id: int
+    brew_category: int
+    brew_sub_category: int
 
 
 @dataclass
@@ -58,6 +66,8 @@ class ScoreSheet:
 @dataclass
 class ScoreSummation:
     entry_id: int
+    category: int
+    sub_category: int
     aroma: int = 0
     appearance: int = 0
     flavour: int = 0
@@ -77,6 +87,8 @@ class ScoreSummation:
         writer.writerow(
             [
                 "Entry Number",
+                "Category",
+                "Sub-category",
                 "Aroma",
                 "Appearance",
                 "Flavour",
@@ -91,6 +103,8 @@ class ScoreSummation:
     def emit_csv_row(self):
         return [
             self.entry_id,
+            self.category,
+            self.sub_category,
             self.aroma,
             self.appearance,
             self.flavour,
@@ -113,42 +127,54 @@ def generate_score_sheet(entry_id: int):
     )
 
 
-def _load_entryids_from_csv(reader: "_csv._reader") -> list[int]:
-    entry_ids: list[int] = []
+def _load_entryids_from_csv(reader: csv.DictReader) -> list[BrewingRecord]:
+    brewing_records: list[BrewingRecord] = []
     for row in reader:
         if len(row) > 0:
-            entry_ids.append(int(row[0]))
+            brewing_records.append(
+                BrewingRecord(
+                    id=int(row["Entry Number"]),
+                    brew_category=int(row["Entry Number"]),
+                    brew_sub_category=int(row["Sub-category"]),
+                )
+            )
 
-    return sorted(entry_ids)
+    return brewing_records
 
 
-def _load_entryids_from_database() -> list[int]:
-    entry_ids: list[int] = []
+def _load_brewrecords_from_database() -> list[BrewingRecord]:
+    brewing_records: list[BrewingRecord] = []
     db = get_db()
     cur: Cursor = db.cursor()
     cur.execute(LOAD_ENTRY_IDS_SQL)
 
     for row in cur:
         if len(row) > 0:
-            entry_ids.append(row[0])
+            brewing_records.append(
+                BrewingRecord(
+                    id=row[0], brew_category=int(row[1]), brew_sub_category=int(row[2])
+                )
+            )
 
-    return sorted(entry_ids)
+    return brewing_records
 
 
 def main(
-    entry_ids: list[int], writer_entry: "_csv._writer", writer_summation: "_csv._writer"
+    brew_records: list[BrewingRecord],
+    writer_entry: "_csv._writer",
+    writer_summation: "_csv._writer",
 ):
-    print(f"{len(entry_ids)} entries: {entry_ids}")
+    print(f"{len(brew_records)} entries: {brew_records}")
     memo_individual_entries: list[list[ScoreSheet]] = []
     memo_summation: list[ScoreSummation] = []
 
-    for entry_id in entry_ids:
-        print(f"Generating scores for entry {entry_id}")
+    for brew_record in brew_records:
+        print(f"Generating scores for entry {brew_record.id}")
         entry_memo: list[ScoreSheet] = []
 
         while len(entry_memo) < SCORES_PER_ENTRY:
             print(".", end="")
-            tmp = generate_score_sheet(entry_id)
+            tmp = generate_score_sheet(brew_record.id)
 
             if len(entry_memo) == 0:
                 entry_memo.append(tmp)
@@ -161,7 +187,11 @@ def main(
             if max_score - min_score <= SCORES_PER_ENTRY:
                 entry_memo.append(tmp)
 
-        summation = ScoreSummation(entry_id=entry_memo[0].entry_id)
+        summation = ScoreSummation(
+            entry_id=brew_record.id,
+            category=brew_record.brew_category,
+            sub_category=brew_record.brew_sub_category,
+        )
         for e in entry_memo:
             summation.appearance += e.appearance
             summation.aroma += e.aroma
@@ -222,22 +252,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.input_filepath is not None:
-        print("Loading Entry IDs from CSV")
-        reader = csv.reader(Path(args.input_filepath).read_text().splitlines())
-        expected_header = "Entry Number"
-        header_row = next(reader)
-        if len(header_row) == 0:
-            print(f"Unable to read file {args.input_filepath}")
-            sys.exit(1)
-
-        if header_row[0] != expected_header:
-            print(f"Expected header '{expected_header}' not found, got '{header_row}'")
-            sys.exit(1)
-
-        entry_ids = _load_entryids_from_csv(reader)
+        print("Loading Brew Records from CSV")
+        reader = csv.DictReader(Path(args.input_filepath).read_text().splitlines())
+        brew_records = _load_entryids_from_csv(reader)
     else:
-        print("Loading Entry IDs from the Database")
-        entry_ids = _load_entryids_from_database()
+        print("Loading Brew Records from the Database")
+        brew_records = _load_brewrecords_from_database()
 
     print(f"Opening {args.output_filepath}")
 
@@ -245,6 +265,6 @@ if __name__ == "__main__":
         writer_summation = csv.writer(fh_summation)
         with Path(args.output_filepath).open("wt") as fh_entry:
             writer_entries = csv.writer(fh_entry)
-            main(entry_ids, writer_entries, writer_summation)
+            main(brew_records, writer_entries, writer_summation)
             print(f"Closing {args.output_filepath}")
         print(f"Closing {args.output_filepath_summation}")
