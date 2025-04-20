@@ -9,14 +9,22 @@ _dry_run = environ.get("DRY_RUN", "false") == "true"
 
 _db = None
 
-if _db is None and not _dry_run:
-    _db = MySQLdb.connect(
-        database=environ["DB_DATABASE"],
-        host=environ["DB_HOST"],
-        password=environ["DB_PASSWORD"],
-        port=int(environ["DB_PORT"]),
-        user=environ["DB_USER"],
-    )
+def _connect():
+    global _db
+    if _db is None and not _dry_run:
+        _db = MySQLdb.connect(
+            database=environ["DB_DATABASE"],
+            host=environ["DB_HOST"],
+            password=environ["DB_PASSWORD"],
+            port=int(environ["DB_PORT"]),
+            user=environ["DB_USER"],
+        )
+
+_connect()
+
+def get_db() -> MySQLdb.Connection:
+    assert _db is not None
+    return _db
 
 
 def create_brew_judging_number() -> str:

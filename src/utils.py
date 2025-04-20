@@ -14,14 +14,20 @@ from src.datadefs import Entry, ParticipantBrewerRecord, ParticipantUserAccount
 def generate_entries(entry_count: int) -> list[Entry]:
     styles = deepcopy(STYLES)
     memo: list[Entry] = []
-    excluded_style_groups: list[str] = []
+    excluded_style_db_ids: list[str] = []
     style_group_entry_count: DefaultDict[str, int] = defaultdict(lambda: 0)
 
     while len(memo) < entry_count:
+        if len(styles) == 0:
+            print("Exhausted available styles!")
+            break
+
         selected = random.choice(styles)
 
-        if selected.brew_style_group in excluded_style_groups:
-            print("selected excluded style group, trying again...")
+        if selected.id in excluded_style_db_ids:
+            print(
+                f"selected excluded style group '{selected.brew_style_name}', excluded_style_groups len = {len(excluded_style_db_ids)}, available styles len = {len(styles)}  trying again..."
+            )
             continue
 
         style_group_entry_count[selected.brew_style_group] += 1
@@ -30,7 +36,7 @@ def generate_entries(entry_count: int) -> list[Entry]:
             style_group_entry_count[selected.brew_style_group]
             == config.max_entries_per_participant_per_group
         ):
-            excluded_style_groups.append(selected.brew_style_group)
+            excluded_style_db_ids.append(selected.id)
 
         memo.append(
             Entry(
