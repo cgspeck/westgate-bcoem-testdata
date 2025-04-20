@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import csv
 import _csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import itertools
 from pathlib import Path
 import argparse
@@ -55,6 +55,53 @@ class ScoreSheet:
         ]
 
 
+@dataclass
+class ScoreSummation:
+    entry_id: int
+    aroma: int = 0
+    appearance: int = 0
+    flavour: int = 0
+    body: int = 0
+    overall: int = 0
+    total_score: float = 0
+    score_spread: int = 0
+    scores: list[int] = field(default_factory=list)
+    score_sheet_count: int = 0
+
+    @property
+    def total(self):
+        return self.aroma + self.appearance + self.flavour + self.body + self.overall
+
+    @classmethod
+    def write_csv_header(cls, writer: "_csv._writer"):
+        writer.writerow(
+            [
+                "Entry Number",
+                "Aroma",
+                "Appearance",
+                "Flavour",
+                "Body",
+                "Overall",
+                "Total Score",
+                "Score Spread",
+                "Score Sheet Count",
+            ]
+        )
+
+    def emit_csv_row(self):
+        return [
+            self.entry_id,
+            self.aroma,
+            self.appearance,
+            self.flavour,
+            self.body,
+            self.overall,
+            self.total_score,
+            self.score_spread,
+            self.score_sheet_count,
+        ]
+
+
 def generate_score_sheet(entry_id: int):
     return ScoreSheet(
         entry_id=entry_id,
@@ -88,9 +135,12 @@ def _load_entryids_from_database() -> list[int]:
     return sorted(entry_ids)
 
 
-def main(entry_ids: list[int], writer: "_csv._writer"):
+def main(
+    entry_ids: list[int], writer_entry: "_csv._writer", writer_summation: "_csv._writer"
+):
     print(f"{len(entry_ids)} entries: {entry_ids}")
-    memo: list[list[ScoreSheet]] = []
+    memo_individual_entries: list[list[ScoreSheet]] = []
+    memo_summation: list[ScoreSummation] = []
 
     for entry_id in entry_ids:
         print(f"Generating scores for entry {entry_id}")
@@ -111,21 +161,41 @@ def main(entry_ids: list[int], writer: "_csv._writer"):
             if max_score - min_score <= SCORES_PER_ENTRY:
                 entry_memo.append(tmp)
 
-        memo.append(entry_memo)
+        summation = ScoreSummation(entry_id=entry_memo[0].entry_id)
+        for e in entry_memo:
+            summation.appearance += e.appearance
+            summation.aroma += e.aroma
+            summation.body += e.body
+            summation.flavour += e.flavour
+            summation.overall += e.overall
+            summation.score_sheet_count += 1
+            summation.scores.append(e.total)
+
+        summation.total_score = sum(summation.scores)
+        summation.score_spread = max(summation.scores) - min(summation.scores)
+        memo_summation.append(summation)
+
+        memo_individual_entries.append(entry_memo)
         print()
 
-    if len(memo) == 0:
+    if len(memo_individual_entries) == 0:
         print("No score sheets generated 🤷")
         return
 
     print("Shuffling the score sheets...")
-    shuffle(memo)
+    shuffle(memo_individual_entries)
     print("Writing header...")
-    memo[0][0].write_csv_header(writer)
-    flattened = list(itertools.chain.from_iterable(memo))
-    values = [f.emit_csv_row() for f in flattened]
+    memo_individual_entries[0][0].write_csv_header(writer_entry)
+    flattened = list(itertools.chain.from_iterable(memo_individual_entries))
+    values_summation = [f.emit_csv_row() for f in flattened]
     print("Writing rows...")
-    writer.writerows(values)
+    writer_entry.writerows(values_summation)
+
+    print("Writing summation...")
+    memo_summation[0].write_csv_header(writer_summation)
+    values_summation = [x.emit_csv_row() for x in memo_summation]
+    print("Writing rows...")
+    writer_summation.writerows(values_summation)
 
 
 if __name__ == "__main__":
@@ -140,7 +210,13 @@ if __name__ == "__main__":
         "--output_filepath",
         "-O",
         default="results.csv",
-        help="Path to output CSVs, will be overwritten",
+        help="Path to output score entry CSV, will be overwritten",
+    )
+    parser.add_argument(
+        "--output_filepath_summation",
+        "-S",
+        default="results-summation.csv",
+        help="Path to output score summation CSV, will be overwritten",
     )
     parser.set_defaults()
     args = parser.parse_args()
@@ -165,7 +241,10 @@ if __name__ == "__main__":
 
     print(f"Opening {args.output_filepath}")
 
-    with Path(args.output_filepath).open("wt") as fh:
-        writer = csv.writer(fh)
-        main(entry_ids, writer)
-        print(f"Closing {args.output_filepath}")
+    with Path(args.output_filepath_summation).open("wt") as fh_summation:
+        writer_summation = csv.writer(fh_summation)
+        with Path(args.output_filepath).open("wt") as fh_entry:
+            writer_entries = csv.writer(fh_entry)
+            main(entry_ids, writer_entries, writer_summation)
+            print(f"Closing {args.output_filepath}")
+        print(f"Closing {args.output_filepath_summation}")
