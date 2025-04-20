@@ -6,6 +6,7 @@ max_entries_per_participant=8
 max_entries_per_participant_per_group=2
 # Probabilities
 ## Entries
+# TODO: confirm unused and delete below
 p_entry_porter=0.5
 p_entry_stout=0.7
 p_entry_strong_stout=0.5
