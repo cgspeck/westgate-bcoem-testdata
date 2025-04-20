@@ -6,7 +6,10 @@ import itertools
 from pathlib import Path
 import argparse
 from random import randint, shuffle
+from MySQLdb.cursors import Cursor
 import sys
+
+from src.db import get_db
 
 AROMA_MAX = 10
 APPEARANCE_MAX = 5
@@ -16,6 +19,10 @@ OVERALL_MAX = 10
 
 SCORE_SPREAD_MAX = 7
 SCORES_PER_ENTRY = 3
+
+LOAD_ENTRY_IDS_SQL = """
+SELECT id FROM `brewing` ORDER BY id ASC;
+"""
 
 
 @dataclass
@@ -58,11 +65,25 @@ def generate_score_sheet(entry_id: int):
         overall=randint(0, OVERALL_MAX),
     )
 
+
 def _load_entryids_from_csv(reader: "_csv._reader") -> list[int]:
     entry_ids: list[int] = []
     for row in reader:
         if len(row) > 0:
             entry_ids.append(int(row[0]))
+
+    return sorted(entry_ids)
+
+
+def _load_entryids_from_database() -> list[int]:
+    entry_ids: list[int] = []
+    db = get_db()
+    cur: Cursor = db.cursor()
+    cur.execute(LOAD_ENTRY_IDS_SQL)
+
+    for row in cur:
+        if len(row) > 0:
+            entry_ids.append(row[0])
 
     return sorted(entry_ids)
 
@@ -112,7 +133,6 @@ if __name__ == "__main__":
         description="Generate a matrix of scores",
         usage="%(prog)s entry-ids.csv results.csv",
     )
-    # TODO: add option to get the entry IDs live from the DB
     parser.add_argument(
         "input_filepath", help="Path to CSV of entry ids", nargs="?", default=None
     )
@@ -141,10 +161,11 @@ if __name__ == "__main__":
         entry_ids = _load_entryids_from_csv(reader)
     else:
         print("Loading Entry IDs from the Database")
-        entry_ids = []
+        entry_ids = _load_entryids_from_database()
 
     print(f"Opening {args.output_filepath}")
 
     with Path(args.output_filepath).open("wt") as fh:
         writer = csv.writer(fh)
         main(entry_ids, writer)
+        print(f"Closing {args.output_filepath}")
