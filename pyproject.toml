@@ -3,16 +3,23 @@ name = "westgate-bcoem-testdata"
 version = "0.1.0"
 description = ""
 authors = ["Chris Speck <cgspeck@gmail.com>"]
+packages = [
+    { include = "src" },
+]
+
+[tool.poetry.scripts]
+gen-points = "westgate-bcoem-testdata:gen_points"
 
 [tool.poetry.dependencies]
 python = "^3.10"
 names = "^0.3.0"
 unique-names-generator = "^1.0.2"
-mysqlclient = "^2.1.0"
+mysqlclient = "^2.2.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 ipdb = "^0.13.9"
-mypy = "^0.950"
+mypy = "^1.15.0"
+types-mysqlclient = "^2.2.0.20250326"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

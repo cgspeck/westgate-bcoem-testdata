@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-import config
-from datadefs import ParticipantBrewerRecord
-from db import create_entries, create_participant, participant_exists
-from utils import generate_participant
-
+from src import config
+from src.datadefs import ParticipantBrewerRecord
+from src.db import create_entries, create_participant, participant_exists
+from src.utils import generate_participant
 
 participants: list[ParticipantBrewerRecord] = []
 
@@ -13,7 +12,7 @@ entry_count = 0
 
 while True:
     new_participant = generate_participant()
-    
+
     if participant_exists(new_participant):
         print(f"Oh no! User with same name or email already exists, skipping...")
         continue
@@ -34,14 +33,14 @@ while True:
     if judge_count < config.min_judges:
         constraints_unsatisfied = True
     if participant_count < config.min_participants:
-        constraints_unsatisfied = True    
+        constraints_unsatisfied = True
     if entry_count < config.min_entries:
         constraints_unsatisfied = True
-    
+
     if not constraints_unsatisfied:
         break
 
-    
+
 print(f"Participants: {len(participants)}")
 print(f"Judges: {judge_count}")
 print(f"Entries: {entry_count}")
